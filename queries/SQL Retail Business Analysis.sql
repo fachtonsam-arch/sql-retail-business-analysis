@@ -1,14 +1,7 @@
-select * from Customer;
-
-select * from Orders;
-
-select * from Employees;
-select * from Product;
-
--- QUESTION 1:
-/* 
-Write an SQL query to calculate the total sales of furniture products, grouped by each quarter of the year, 
-and order the results chronologically. 
+-- QUERY 1: Furniture Quarterly Sales Trend
+/*
+How did Furniture category revenue trend across quarters from 2014 to 2016,
+and which period delivered the strongest quarter-over-quarter growth?
 */
 
 SELECT
@@ -25,16 +18,17 @@ ORDER BY
     DATEPART(YEAR, o.ORDER_DATE),
     DATEPART(QUARTER, o.ORDER_DATE);
 
--- QUESTION 2:
-/* 
-Analyze the impact of different discount levels on sales performance across product categories, 
-specifically looking at the number of orders and total profit generated for each discount classification.
+
+-- QUERY 2: Discount Impact on Profitability
+/*
+How does discount depth affect profitability across product categories,
+and at what discount tier does the business shift from profit to loss?
 
 Discount level condition:
 No Discount = 0
 0 < Low Discount <= 0.2
 0.2 < Medium Discount <= 0.5
-High Discount > 0.5 
+High Discount > 0.5
 */
 
 WITH DiscountClass AS (
@@ -68,10 +62,11 @@ ORDER BY
     ProductCategory,
     DiscountLevel;
 
--- QUESTION 3:
-/* 
-Determine the top-performing product categories within each customer segment based on sales and profit, 
-focusing specifically on those categories that rank within the top two for profitability. 
+
+-- QUERY 3: Top Categories by Customer Segment
+/*
+Which product categories drive the most revenue and profit within each customer segment,
+and does the highest-selling category always yield the highest profit margin?
 */
 
 WITH CategoryPerformance AS (
@@ -116,11 +111,10 @@ ORDER BY
     SalesRank;
 
 
--- QUESTION 4
+-- QUERY 4: Employee Profit Distribution by Category
 /*
-Create a report that displays each employee's performance across different product categories, showing not only the 
-total profit per category but also what percentage of their total profit each category represents, with the result 
-ordered by the percentage in descending order for each employee.
+How is each sales employee's profit distributed across product categories,
+and which employees are over-reliant on a single category?
 */
 
 WITH EmployeeCategoryTotals AS (
@@ -149,8 +143,8 @@ Final AS (
         c.EmployeeID,
         c.ProductCategory,
         FORMAT
-            (ROUND(c.CategoryProfit, 2), 'N2') 
-            AS Rounded_Total_Profit, 
+            (ROUND(c.CategoryProfit, 2), 'N2')
+            AS Rounded_Total_Profit,
         c.CategoryProfit * 1.0 / NULLIF(t.EmployeeTotalProfit, 0) AS ProfitPct
     FROM EmployeeCategoryTotals c
     JOIN EmployeeTotals t
@@ -167,14 +161,13 @@ ORDER BY
     ProfitPct DESC;
 
 
--- QUESTION 5:
+-- QUERY 5: Profitability Ratio Analysis
 /*
-Develop a user-defined function in SQL Server to calculate the profitability ratio for each product category 
-an employee has sold, and then apply this function to generate a report that sorts each employee's product categories
-by their profitability ratio.
+Which product categories deliver the highest profit-per-dollar-of-sales for each employee,
+and where should the business redirect its sales focus?
 */
 
--- Create user-defined, scalar-valued Function 
+-- Create user-defined, scalar-valued Function
 ALTER FUNCTION dbo.fnProfitabilityRatio
 (
     @Profit DECIMAL(18,4),
@@ -194,7 +187,7 @@ BEGIN
 END;
 GO
 
----- Generate a report for employees' performance
+-- Generate a report for employees' performance
 
 WITH EmployeeCategoryTotals AS (
     SELECT
@@ -227,17 +220,14 @@ ORDER BY
     dbo.fnProfitabilityRatio(CategoryProfit, CategorySales) DESC;
 
 
--------------
-
-
--- QUESTION 6:
-/* 
-Write a stored procedure to calculate the total sales and profit for a specific EMPLOYEE_ID over a specified date range. 
-The procedure should accept EMPLOYEE_ID, StartDate, and EndDate as parameters.
+-- QUERY 6: Employee Performance Query Tool
+/*
+How can management efficiently query any employee's sales and profit for any custom time window
+— enabling on-demand performance reviews?
 */
----- set up procedure 
 
-alter PROCEDURE dbo.GetEmployeeSalesProfit
+-- Set up stored procedure
+ALTER PROCEDURE dbo.GetEmployeeSalesProfit
     @EmployeeID INT,
     @StartDate DATE,
     @EndDate DATE
@@ -261,21 +251,20 @@ BEGIN
 END;
 GO
 
----
-SELECT * FROM EMPLOYEES
-
+-- Example execution
 EXEC dbo.GetEmployeeSalesProfit
     @EmployeeID = 3,
     @StartDate = '2016-12-01',
     @EndDate = '2016-12-31';
 
--- QUESTION 7:
+
+-- QUERY 7: Regional Profit Pivot — State × Quarter
 /*
-Write a query using dynamic SQL query to calculate the total profit for the last six quarters in the datasets, 
-pivoted by quarter of the year, for each state.
+How did profit performance vary across US states over the last 6 quarters,
+and which states show consistent growth vs. decline?
 */
 
----- change datatype of culumn profit to 2 decimals.
+-- Change datatype of column profit to 2 decimals
 ALTER TABLE ORDERS
 ALTER COLUMN PROFIT DECIMAL(18,2);
 
@@ -317,8 +306,5 @@ SET @sql = '
     ORDER BY State;
 ';
 
--- Execute 
+-- Execute
 EXEC sp_executesql @sql;
-
----- I cant round the data for profit to show minimal amount and eliminate 0 decimals. Using FORMAT() function is too complicated ----
-
