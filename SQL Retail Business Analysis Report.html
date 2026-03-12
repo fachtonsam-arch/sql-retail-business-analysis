@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Retail Business Analysis Report</title>
+  <style>
+    /* ── Reset ─────────────────────────────────── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.65;
+      color: #252423;
+      background: #ffffff;
+    }
+
+    /* ── Progress bar ───────────────────────────── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 4px;
+      width: 0%;
+      background: linear-gradient(90deg, #E8A500, #FFD055);
+      z-index: 9999;
+      transition: width 0.1s linear;
+    }
+
+    /* ── TOC sidebar ────────────────────────────── */
+    #toc {
+      position: fixed;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 100;
+    }
+    #toc a {
+      display: block;
+      font-size: 8.5pt;
+      font-weight: 600;
+      color: #aaa;
+      text-decoration: none;
+      padding: 4px 10px;
+      border-left: 2px solid #ddd;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    #toc a:hover { color: #1A3A6B; border-color: #1A3A6B; }
+    #toc a.active { color: #E8A500; border-color: #E8A500; }
+    @media (max-width: 1100px) { #toc { display: none; } }
+
+    /* ── Wrapper ────────────────────────────────── */
+    .wrapper {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 40px 48px;
+    }
+
+    /* ── Cover ──────────────────────────────────── */
+    .cover {
+      position: relative;
+      text-align: center;
+      padding: 90px 40px 70px;
+      margin: -40px -48px 56px;
+      background: #1A3A6B;
+      overflow: hidden;
+    }
+    .cover::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .cover::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 70% 60% at 50% 40%, rgba(232,165,0,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cover h1 {
+      position: relative;
+      z-index: 1;
+      font-size: 28pt;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+    .cover h1::after {
+      content: '';
+      display: block;
+      height: 3px;
+      background: #E8A500;
+      width: 0;
+      margin: 8px auto 0;
+      border-radius: 2px;
+      animation: underline-grow 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s forwards;
+    }
+    @keyframes underline-grow { to { width: 100%; } }
+    .cover .subtitle {
+      position: relative;
+      z-index: 1;
+      font-size: 14pt;
+      color: #E8A500;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .cover .meta {
+      position: relative;
+      z-index: 1;
+      font-size: 10pt;
+      color: rgba(255,255,255,0.6);
+    }
+
+    /* ── How-to guide ───────────────────────────── */
+    .guide-box {
+      background: #F0F4FA;
+      border: 1px solid #C5D4E8;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+    }
+    .guide-box .guide-title {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #1A3A6B;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 8px;
+    }
+    .guide-box p {
+      font-size: 10pt;
+      color: #444;
+      margin-bottom: 0;
+    }
+
+    /* ── Section headers ────────────────────────── */
+    h2 {
+      font-size: 16pt;
+      font-weight: 700;
+      color: #1A3A6B;
+      margin: 40px 0 8px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #E8A500;
+    }
+    h3 {
+      font-size: 12pt;
+      font-weight: 600;
+      color: #1A3A6B;
+      margin: 24px 0 6px;
+    }
+
+    p {
+      margin-bottom: 12px;
+      color: #333;
+    }
+
+    /* ── Research question block ────────────────── */
+    .research-q {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #ffffff;
+      border: 1.5px solid #1A3A6B;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin: 10px 0 14px;
+    }
+    .research-q .rq-icon {
+      font-size: 14pt;
+      color: #1A3A6B;
+      font-weight: 700;
+      line-height: 1.4;
+      flex-shrink: 0;
+    }
+    .research-q .rq-body { flex: 1; }
+    .research-q .rq-label {
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #1A3A6B;
+      margin-bottom: 3px;
+    }
+    .research-q .rq-text {
+      font-size: 10.5pt;
+      color: #1A3A6B;
+      font-style: italic;
+      margin-bottom: 6px;
+    }
+
+    /* ── SQL-ref badge ──────────────────────────── */
+    .sql-ref {
+      display: inline-block;
+      background: #1A3A6B;
+      color: #ffffff;
+      font-size: 8pt;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 3px;
+      letter-spacing: 0.04em;
+      transition: box-shadow 0.25s ease, background 0.25s ease;
+      cursor: default;
+    }
+    .sql-ref:hover {
+      background: #234e8f;
+      box-shadow: 0 0 0 3px rgba(232,165,0,0.35), 0 0 10px rgba(232,165,0,0.2);
+    }
+
+    /* ── Finding cards ──────────────────────────── */
+    .finding {
+      background: #FFFDF0;
+      border-left: 4px solid #E8A500;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 16px 0;
+    }
+    .finding .label {
+      font-size: 9pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #E8A500;
+      margin-bottom: 4px;
+    }
+
+    /* ── Stat cards ─────────────────────────────── */
+    .stat-row {
+      display: flex;
+      gap: 16px;
+      margin: 16px 0;
+      flex-wrap: wrap;
+    }
+    .stat {
+      flex: 1;
+      min-width: 140px;
+      background: #F0F4FA;
+      border-radius: 8px;
+      padding: 12px 16px;
+      text-align: center;
+      border-top: 3px solid transparent;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  box-shadow 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  border-color 0.25s ease;
+      cursor: default;
+    }
+    .stat:hover {
+      transform: scale(1.04);
+      box-shadow: 0 8px 24px rgba(26,58,107,0.14), 0 2px 6px rgba(26,58,107,0.08);
+      border-color: #E8A500;
+    }
+    .stat .value {
+      font-size: 20pt;
+      font-weight: 700;
+      color: #1A3A6B;
+    }
+    .stat .label {
+      font-size: 9pt;
+      color: #666;
+    }
+
+    /* ── Code block ─────────────────────────────── */
+    .code-block {
+      background: #1e2a3a;
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin: 14px 0;
+      overflow-x: auto;
+    }
+    .code-block code {
+      font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+      font-size: 9pt;
+      color: #c9d1d9;
+      white-space: pre;
+      line-height: 1.6;
+    }
+    .code-block code .kw  { color: #79c0ff; }
+    .code-block code .fn  { color: #d2a8ff; }
+    .code-block code .cm  { color: #8b949e; font-style: italic; }
+    .code-block code .st  { color: #a5d6ff; }
+    .code-block code .nm  { color: #ffa657; }
+
+    ul, ol {
+      padding-left: 22px;
+      margin-bottom: 12px;
+    }
+    li { margin-bottom: 4px; }
+
+    .highlight {
+      background: #1A3A6B;
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 600;
+      font-size: 10pt;
+    }
+
+    .footer {
+      margin-top: 56px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+      font-size: 9pt;
+      color: #999;
+      text-align: center;
+    }
+
+    /* ── Scroll-reveal base states ──────────────── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .finding.reveal {
+      border-left-width: 0;
+      transition: opacity 0.55s ease,
+                  transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  border-left-width 0.4s ease 0.3s;
+    }
+    .finding.reveal.visible {
+      border-left-width: 4px;
+    }
+
+    /* ── Print safety ───────────────────────────── */
+    @media print {
+      body { margin: 0; }
+      .page-break { page-break-before: always; }
+      .no-print, #toc, #progress-bar { display: none; }
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+      .reveal { opacity: 1 !important; transform: none !important; }
+      .finding.reveal { border-left-width: 4px !important; }
+      .cover {
+        margin: 0;
+        padding: 60px 40px 50px;
+        background: #1A3A6B !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .cover h1::after { width: 100% !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div id="progress-bar"></div>
+
+<!-- TOC Sidebar -->
+<nav id="toc" aria-label="Sections">
+  <a href="#sec1">1 · Furniture Trends</a>
+  <a href="#sec2">2 · Discount Impact</a>
+  <a href="#sec3">3 · Segment Rankings</a>
+  <a href="#sec4">4 · Employee Profit</a>
+  <a href="#sec5">5 · Profitability Ratio</a>
+  <a href="#sec6">6 · Performance Query</a>
+  <a href="#sec7">7 · Regional Pivot</a>
+</nav>
+
+<div class="wrapper">
+
+  <!-- Cover -->
+  <div class="cover">
+    <h1>SQL Retail Business Analysis</h1>
+    <div class="subtitle">Sales, Profitability &amp; Employee Performance Report</div>
+    <div class="meta">Based on 2014&ndash;2016 US retail transaction data</div>
+  </div>
+
+  <!-- Dataset KPIs -->
+  <div class="stat-row">
+    <div class="stat reveal">
+      <div class="value">9,994</div>
+      <div class="label">Total Orders</div>
+    </div>
+    <div class="stat reveal" style="transition-delay:0.08s">
+      <div class="value">793</div>
+      <div class="label">Total Customers</div>
+    </div>
+    <div class="stat reveal" style="transition-delay:0.16s">
+      <div class="value">1,862</div>
+      <div class="label">Total Products</div>
+    </div>
+    <div class="stat reveal" style="transition-delay:0.24s">
+      <div class="value">9</div>
+      <div class="label">Sales Employees</div>
+    </div>
+  </div>
+
+  <!-- How to read this report -->
+  <div class="guide-box reveal">
+    <div class="guide-title">How to use this report</div>
+    <p>Each section opens with a <em>Research Question</em> — the business question that motivated the analysis. A <strong>SQL Query</strong> badge indicates which query in the file produces the supporting result.</p>
+    <p style="margin-top:8px;margin-bottom:0;">&#128196; Source data files: <a href="https://github.com/fachtonsam-arch/sql-retail-business-analysis/raw/main/data/CUSTOMER.csv" style="color:#1A3A6B;font-weight:600;text-decoration:underline;">CUSTOMER.csv</a> &nbsp;&mdash;&nbsp; <a href="https://github.com/fachtonsam-arch/sql-retail-business-analysis/raw/main/data/ORDERS.csv" style="color:#1A3A6B;font-weight:600;text-decoration:underline;">ORDERS.csv</a> &nbsp;&mdash;&nbsp; <a href="https://github.com/fachtonsam-arch/sql-retail-business-analysis/raw/main/data/PRODUCT.csv" style="color:#1A3A6B;font-weight:600;text-decoration:underline;">PRODUCT.csv</a> &nbsp;&mdash;&nbsp; <a href="https://github.com/fachtonsam-arch/sql-retail-business-analysis/raw/main/data/EMPLOYEES.csv" style="color:#1A3A6B;font-weight:600;text-decoration:underline;">EMPLOYEES.csv</a></p>
+    <p style="margin-top:6px;margin-bottom:0;">&#11015; Full SQL query file: <a href="https://github.com/fachtonsam-arch/sql-retail-business-analysis/raw/main/queries/SQL%20Retail%20Business%20Analysis.sql" style="color:#1A3A6B;font-weight:600;text-decoration:underline;">SQL Retail Business Analysis.sql</a></p>
+  </div>
+
+  <!-- Section 1 -->
+  <h2 id="sec1" class="reveal">Section 1 &mdash; Furniture Category Sales Trend</h2>
+
+  <div class="research-q reveal">
+    <div class="rq-icon">?</div>
+    <div class="rq-body">
+      <div class="rq-label">Research Question</div>
+      <div class="rq-text">How did Furniture category revenue trend across quarters from 2014 to 2016, and which period delivered the strongest quarter-over-quarter growth?</div>
+      <span class="sql-ref">&#9656; SQL Query 1 &mdash; Quarterly Aggregation with DATEPART</span>
+    </div>
+  </div>
+
+  <p>
+    This query aggregates total Furniture sales by quarter using <code>DATEPART(QUARTER, ORDER_DATE)</code> and <code>DATEPART(YEAR, ORDER_DATE)</code>, producing a chronologically ordered series from Q1-2014 through Q4-2016. The result set allows for direct quarter-on-quarter comparison of revenue performance across the Furniture product line.
+  </p>
+
+  <h3 class="reveal">Approach</h3>
+  <p>
+    The <code>ORDERS</code> table is joined to the <code>PRODUCT</code> table to isolate Furniture transactions. A <code>CONCAT</code> label (e.g., <em>Q3-2016</em>) is generated for readability, and results are ordered chronologically by year then quarter — ensuring the output reads as a clean time series rather than alphabetical label order.
+  </p>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    Furniture sales exhibit a recurring seasonal pattern across all three years: Q1 is consistently the weakest quarter, while Q3 and Q4 see stronger revenue as consumer and corporate purchasing activity peaks heading into year-end. This pattern aligns with typical B2B procurement cycles where furniture budgets are allocated in Q2 and executed in Q3&ndash;Q4.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Business Implication</div>
+    Inventory planning and supplier contracts for the Furniture category should be front-loaded before Q3 to avoid stock shortfalls during the seasonal uplift. Q1 promotional strategies (e.g., clearance pricing, bundle deals) may help smooth the revenue trough and improve annual revenue stability.
+  </div>
+
+  <!-- Section 2 -->
+  <h2 id="sec2" class="page-break reveal">Section 2 &mdash; Discount Impact on Profitability</h2>
+
+  <div class="research-q reveal">
+    <div class="rq-icon">?</div>
+    <div class="rq-body">
+      <div class="rq-label">Research Question</div>
+      <div class="rq-text">How does discount depth affect profitability across product categories, and at what discount tier does the business shift from profit to loss?</div>
+      <span class="sql-ref">&#9656; SQL Query 2 &mdash; CTE with CASE Discount Classification</span>
+    </div>
+  </div>
+
+  <p>
+    Discounts are classified into four tiers using a <code>CASE</code> expression inside a CTE: <strong>No Discount</strong> (0%), <strong>Low</strong> (&le;20%), <strong>Medium</strong> (&le;50%), and <strong>High</strong> (&gt;50%). The outer query then aggregates order count, total sales, and total profit by product category and discount tier — enabling a direct comparison of profitability across discount strategies.
+  </p>
+
+  <h3 class="reveal">Discount Tier Definitions</h3>
+  <ul>
+    <li><span class="highlight">No Discount</span> — Full-price orders (DISCOUNT = 0)</li>
+    <li><span class="highlight">Low Discount</span> — 1% to 20% off</li>
+    <li><span class="highlight">Medium Discount</span> — 21% to 50% off</li>
+    <li><span class="highlight">High Discount</span> — Greater than 50% off</li>
+  </ul>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    High-discount orders (&gt;50%) consistently generate negative total profit across all three product categories — Furniture, Office Supplies, and Technology. The business is selling at a loss on every heavily discounted transaction, meaning the volume gain from high discounts does not offset the margin destruction.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    The No Discount and Low Discount tiers are the primary profit drivers. As discount depth increases beyond 20%, profitability deteriorates sharply. Medium Discount orders still generate marginal positive profit in some categories, but the profit-per-order is significantly lower than undiscounted transactions.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Business Implication</div>
+    The current high-discount strategy is commercially destructive. A discount cap policy — limiting promotions to a maximum of 20&ndash;30% — would preserve margin while still providing competitive pricing. High-discount orders should be reviewed for whether they represent strategic account investments or simply unchecked promotional activity.
+  </div>
+
+  <!-- Section 3 -->
+  <h2 id="sec3" class="page-break reveal">Section 3 &mdash; Top Categories by Customer Segment</h2>
+
+  <div class="research-q reveal">
+    <div class="rq-icon">?</div>
+    <div class="rq-body">
+      <div class="rq-label">Research Question</div>
+      <div class="rq-text">Which product categories drive the most revenue and profit within each customer segment, and does the highest-selling category always yield the highest profit margin?</div>
+      <span class="sql-ref">&#9656; SQL Query 3 &mdash; Window Functions RANK() OVER PARTITION BY</span>
+    </div>
+  </div>
+
+  <p>
+    This query uses two independent <code>RANK()</code> window functions, each partitioned by <code>CustomerSegment</code>: one ranking by total sales descending, and one by total profit descending. The result is filtered to show only the top 2 categories by profit rank per segment — revealing whether the volume leader and the profit leader are the same category within each customer group.
+  </p>
+
+  <h3 class="reveal">Customer Segments Analysed</h3>
+  <div class="stat-row">
+    <div class="stat reveal">
+      <div class="value">Consumer</div>
+      <div class="label">Largest segment by order volume</div>
+    </div>
+    <div class="stat reveal" style="transition-delay:0.08s">
+      <div class="value">Corporate</div>
+      <div class="label">High-value B2B buyers</div>
+    </div>
+    <div class="stat reveal" style="transition-delay:0.16s">
+      <div class="value">Home Office</div>
+      <div class="label">Small-scale, high-frequency buyers</div>
+    </div>
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    <strong>Technology</strong> ranks as the top profit-generating category for both the Consumer and Corporate segments — driven by higher unit prices and more resilient margins compared to Furniture. <strong>Office Supplies</strong> leads for the Home Office segment, where smaller, frequent purchases accumulate to strong cumulative profit.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    Sales rank and profit rank do not always align. In several segments, the highest-revenue category is not the most profitable — a critical distinction for resource allocation. Focusing sales activity on high-revenue categories without considering margin can inflate top-line numbers while eroding profitability.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Business Implication</div>
+    Sales teams should be incentivised on profit-weighted metrics rather than pure revenue. The divergence between sales rank and profit rank indicates that some high-volume categories are being sold with excessive discounts or have structurally lower margins that should be addressed through pricing reviews.
+  </div>
+
+  <!-- Section 4 -->
+  <h2 id="sec4" class="page-break reveal">Section 4 &mdash; Employee Profit Distribution by Category</h2>
+
+  <div class="research-q reveal">
+    <div class="rq-icon">?</div>
+    <div class="rq-body">
+      <div class="rq-label">Research Question</div>
+      <div class="rq-text">How is each sales employee's profit distributed across product categories, and which employees are over-reliant on a single category for the majority of their total profit?</div>
+      <span class="sql-ref">&#9656; SQL Query 4 &mdash; Multi-level CTE with Profit Percentage Calculation</span>
+    </div>
+  </div>
+
+  <p>
+    This query uses a three-stage CTE structure. The first CTE (<code>EmployeeCategoryTotals</code>) aggregates profit by employee and category. The second (<code>EmployeeTotals</code>) sums each employee's overall profit. The final CTE computes <code>CategoryProfit / EmployeeTotalProfit</code> as a profit contribution percentage, formatted using <code>FORMAT()</code> for clean output. Results are ordered by employee, then by profit percentage descending — so each employee's strongest category appears first.
+  </p>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    The majority of employees generate 60&ndash;80% of their total profit from a single product category. This concentration risk means that a downturn in one category — through seasonal demand shifts, competitor pricing, or supply issues — could disproportionately impact individual employee performance and the business's aggregate profit.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    <strong>Technology</strong> is the dominant profit category for most employees, reflecting its higher unit values and stronger margins. Employees whose primary category is <strong>Furniture</strong> tend to show lower overall profit totals, consistent with the margin pressure observed in the discount analysis.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Business Implication</div>
+    A cross-selling programme targeting employees with high single-category concentration would diversify revenue exposure. Pairing Technology-focused employees with Office Supplies upsell training could increase wallet share per customer and reduce vulnerability to category-specific downturns.
+  </div>
+
+  <!-- Section 5 -->
+  <h2 id="sec5" class="page-break reveal">Section 5 &mdash; Profitability Ratio Analysis (UDF)</h2>
+
+  <div class="research-q reveal">
+    <div class="rq-icon">?</div>
+    <div class="rq-body">
+      <div class="rq-label">Research Question</div>
+      <div class="rq-text">Which product categories deliver the highest profit-per-dollar-of-sales for each employee, and where should the business redirect its sales focus to maximise margin efficiency?</div>
+      <span class="sql-ref">&#9656; SQL Query 5 &mdash; User-Defined Scalar Function (UDF)</span>
+    </div>
+  </div>
+
+  <p>
+    A scalar user-defined function <code>dbo.fnProfitabilityRatio(@Profit, @Sales)</code> is created to encapsulate the profit margin calculation: <code>ROUND(@Profit / @Sales, 2)</code>. The function handles edge cases where <code>@Sales</code> is <code>NULL</code> or zero by returning 0, preventing division errors. The UDF is then applied in a report query that ranks each employee's product categories by their profitability ratio — the profit earned per dollar of revenue generated.
+  </p>
+
+  <h3 class="reveal">Function Signature</h3>
+  <div class="code-block reveal">
+    <code><span class="kw">CREATE FUNCTION</span> dbo.<span class="fn">fnProfitabilityRatio</span>(
+    @Profit <span class="kw">DECIMAL</span>(<span class="nm">18,4</span>),
+    @Sales  <span class="kw">DECIMAL</span>(<span class="nm">18,4</span>)
+)
+<span class="kw">RETURNS DECIMAL</span>(<span class="nm">18,2</span>)
+<span class="cm">-- Returns PROFIT / SALES, 0 if sales is null or zero</span></code>
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    <strong>Technology</strong> consistently achieves the highest profitability ratio across most employees — meaning more profit is generated per dollar of Technology revenue than for Furniture or Office Supplies. This is driven by fewer discount incidents and higher absolute unit margins in the Technology category.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    <strong>Furniture</strong> records the lowest profitability ratios for most employees — and in some cases, a negative ratio — confirming that discount abuse in this category is not just reducing profit but actively destroying it on a per-revenue basis.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Business Implication</div>
+    Encapsulating business logic in a UDF makes the profitability calculation reusable and consistent across the entire database. Any future report requiring margin analysis can invoke <code>dbo.fnProfitabilityRatio()</code> without reimplementing the division logic — reducing errors and ensuring a single definition of "profitability ratio" across all reports.
+  </div>
+
+  <!-- Section 6 -->
+  <h2 id="sec6" class="page-break reveal">Section 6 &mdash; Employee Performance Query Tool (Stored Procedure)</h2>
+
+  <div class="research-q reveal">
+    <div class="rq-icon">?</div>
+    <div class="rq-body">
+      <div class="rq-label">Research Question</div>
+      <div class="rq-text">How can management efficiently query any employee's total sales and profit for any custom time window — enabling on-demand performance reviews without requiring ad-hoc SQL knowledge?</div>
+      <span class="sql-ref">&#9656; SQL Query 6 &mdash; Parameterised Stored Procedure</span>
+    </div>
+  </div>
+
+  <p>
+    The stored procedure <code>dbo.GetEmployeeSalesProfit</code> accepts three parameters — <code>@EmployeeID</code>, <code>@StartDate</code>, and <code>@EndDate</code> — and returns the employee's name, total sales, and total profit for the specified period. The procedure uses <code>SET NOCOUNT ON</code> for clean output and applies <code>FORMAT()</code> for human-readable number formatting.
+  </p>
+
+  <h3 class="reveal">Procedure Parameters</h3>
+  <div class="code-block reveal">
+    <code><span class="kw">EXEC</span> dbo.<span class="fn">GetEmployeeSalesProfit</span>
+    @EmployeeID = <span class="nm">3</span>,
+    @StartDate  = <span class="st">'2016-12-01'</span>,
+    @EndDate    = <span class="st">'2016-12-31'</span>;
+<span class="cm">-- Returns: Employee_Name | Total_Sales | Total_Profit
+-- for the specified employee across the given date range</span></code>
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    Parameterised stored procedures are a significant operational upgrade over ad-hoc queries. By abstracting the logic into a callable procedure, any business user with <code>EXECUTE</code> permission can retrieve employee performance data without writing SQL — enabling self-service reporting for sales managers, HR, and finance teams.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    The date-range parameter design allows flexible use: the same procedure supports weekly review calls (7-day window), monthly performance reviews, quarterly assessments, and annual appraisals — all with a single <code>EXEC</code> call, no query modification required.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Business Implication</div>
+    Extending this stored procedure with additional parameters (e.g., <code>@Category</code>) or output modes (e.g., per-category breakdown) would further increase its utility. It serves as the foundation for a management reporting layer that could eventually feed a Power BI or Excel connected report via a direct database connection.
+  </div>
+
+  <!-- Section 7 -->
+  <h2 id="sec7" class="page-break reveal">Section 7 &mdash; Regional Profit Pivot &mdash; State &times; Quarter</h2>
+
+  <div class="research-q reveal">
+    <div class="rq-icon">?</div>
+    <div class="rq-body">
+      <div class="rq-label">Research Question</div>
+      <div class="rq-text">How did profit performance vary across US states over the last six quarters of the dataset, and which states show consistent growth versus persistent decline?</div>
+      <span class="sql-ref">&#9656; SQL Query 7 &mdash; Dynamic SQL with STRING_AGG and PIVOT</span>
+    </div>
+  </div>
+
+  <p>
+    This query uses dynamic SQL to build a pivot table where rows are US states and columns are the six most recent quarters in the data. Because the quarter column names are data-driven (not fixed), the column list cannot be hardcoded — instead, <code>STRING_AGG(QUOTENAME(QuarterLabel), ',')</code> assembles the column list dynamically from the top 6 distinct quarters ordered by recency. The pivot SQL string is then executed via <code>EXEC sp_executesql @sql</code>.
+  </p>
+
+  <h3 class="reveal">Dynamic Column Generation</h3>
+  <div class="code-block reveal">
+    <code><span class="kw">SELECT</span> @cols = <span class="fn">STRING_AGG</span>(<span class="fn">QUOTENAME</span>(QuarterLabel), <span class="st">','</span>)
+<span class="kw">FROM</span> (
+    <span class="kw">SELECT TOP</span> <span class="nm">6</span> QuarterLabel, Yr, Qtr
+    <span class="kw">FROM</span> QuarterData
+    <span class="kw">ORDER BY</span> Yr <span class="kw">DESC</span>, Qtr <span class="kw">DESC</span>
+) <span class="kw">AS</span> x;
+<span class="cm">-- Produces: [Q4-2016],[Q3-2016],[Q2-2016],[Q1-2016],[Q4-2015],[Q3-2015]</span></code>
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    State-level profit is highly concentrated. A small number of high-population states — led by California, New York, and Texas — account for the majority of total profit across all six quarters. These states represent the business's core revenue geography and should receive disproportionate sales and marketing investment.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Key Insight</div>
+    Several smaller states show quarter-on-quarter profit volatility — swinging between positive and negative within the six-quarter window. This is typical of low-order-volume geographies where a single large discounted order can flip a quarter's profit negative. These states may benefit from minimum-order or minimum-margin guardrails to stabilise profitability.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Technical Note</div>
+    Dynamic SQL is a powerful but sensitive technique. The use of <code>QUOTENAME()</code> around column names is essential to prevent SQL injection from adversarial quarter label values and to correctly escape names with special characters. The <code>ALTER TABLE ORDERS ALTER COLUMN PROFIT DECIMAL(18,2)</code> statement preceding the pivot ensures numeric precision in aggregated outputs.
+  </div>
+
+  <div class="finding reveal">
+    <div class="label">Business Implication</div>
+    The state &times; quarter pivot output is directly exportable to Excel or Power BI for geographic heat-map visualisation. Overlaying this data with regional sales headcount would reveal whether profit concentration mirrors employee deployment — or whether some regions are under-resourced relative to their revenue potential.
+  </div>
+
+  <div class="footer">
+    SQL Retail Business Analysis Report &nbsp;|&nbsp; Based on 2014&ndash;2016 US retail transaction data &nbsp;|&nbsp; SQL Server &middot; T-SQL
+  </div>
+
+</div>
+
+<script>
+  // ── Progress bar ─────────────────────────────────
+  const bar = document.getElementById('progress-bar');
+  function updateProgress() {
+    const scrollTop = window.scrollY;
+    const docH = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = docH > 0 ? (scrollTop / docH * 100) + '%' : '0%';
+  }
+  window.addEventListener('scroll', updateProgress, { passive: true });
+
+  // ── Scroll-reveal (Intersection Observer) ────────
+  const revealEls = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  revealEls.forEach(el => observer.observe(el));
+
+  // ── TOC active section tracking ───────────────────
+  const sections = ['sec1','sec2','sec3','sec4','sec5','sec6','sec7'];
+  const tocLinks = document.querySelectorAll('#toc a');
+
+  function updateTOC() {
+    let current = sections[0];
+    sections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.getBoundingClientRect().top <= 120) current = id;
+    });
+    tocLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  }
+  window.addEventListener('scroll', updateTOC, { passive: true });
+  updateTOC();
+
+  // ── Smooth scroll for TOC clicks ──────────────────
+  tocLinks.forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.getElementById(a.getAttribute('href').slice(1));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+
+</body>
+</html>
