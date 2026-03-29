@@ -52,7 +52,7 @@ A multi-year (2014–2016) sales and operations analysis for a US retail busines
 
 ## View the Report
 
-**[Open Interactive Report in Browser](https://htmlpreview.github.io/?https://raw.githubusercontent.com/fachtonsam-arch/sql-retail-business-analysis/main/SQL%20Retail%20Business%20Analysis%20Report.html)**
+**[Open Interactive Report in Browser](https://htmlpreview.github.io/?https://raw.githubusercontent.com/Tommy-Nguyen-Stonera/sql-retail-business-analysis/main/SQL%20Retail%20Business%20Analysis%20Report.html)**
 
 ---
 
